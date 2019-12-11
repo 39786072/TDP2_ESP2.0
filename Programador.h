@@ -70,5 +70,5 @@ const uint8_t device_ext[5] = {
 
 unsigned char strtobyte(char value);
 bool WaitFor(uint8_t c, uint16_t timeout);
-void InitProg ();
+bool InitProg ();
 #endif

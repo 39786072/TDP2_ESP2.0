@@ -34,7 +34,7 @@ bool WaitFor(uint8_t c, uint16_t timeout)
 
 
 
-void InitProg ()
+bool InitProg ()
 {
       #ifdef DEBUG
         Serial1.println("Reset Slave");
@@ -49,8 +49,8 @@ void InitProg ()
       #endif
       Serial.write(Cmnd_STK_GET_SYNC);
       Serial.write(Sync_CRC_EOP);
-      WaitFor(Resp_STK_INSYNC,65000);
-      WaitFor(Resp_STK_OK,65000);
+      if(!WaitFor(Resp_STK_INSYNC,65000)){return false;}
+      if(!WaitFor(Resp_STK_OK,65000)){return false;}
      
       
       #ifdef DEBUG
@@ -58,8 +58,8 @@ void InitProg ()
       #endif
       Serial.write(Cmnd_STK_GET_SYNC);
       Serial.write(Sync_CRC_EOP);
-      WaitFor(Resp_STK_INSYNC,65000);
-      WaitFor(Resp_STK_OK,65000);
+      if(!WaitFor(Resp_STK_INSYNC,65000)){return false;}
+      if(!WaitFor(Resp_STK_OK,65000)){return false;}
       
       #ifdef DEBUG
         Serial1.println("GET MAJOR");
@@ -68,9 +68,9 @@ void InitProg ()
       Serial.write(Parm_STK_SW_MAJOR);
       Serial.write(Sync_CRC_EOP);
       
-      WaitFor(Resp_STK_INSYNC,65000);
-      WaitFor(0x4,65000); 
-      WaitFor(Resp_STK_OK,65000);
+      if(!WaitFor(Resp_STK_INSYNC,65000)){return false;}
+      if(!WaitFor(0x4,65000)){return false;} 
+      if(!WaitFor(Resp_STK_OK,65000)){return false;}
 
       
       #ifdef DEBUG
@@ -80,9 +80,9 @@ void InitProg ()
       Serial.write(Parm_STK_SW_MINOR);
       Serial.write(Sync_CRC_EOP);
       
-      WaitFor(Resp_STK_INSYNC,65000);
-      WaitFor(0x4,65000); 
-      WaitFor(Resp_STK_OK,65000);
+      if(!WaitFor(Resp_STK_INSYNC,65000)){return false;}
+      if(!WaitFor(0x4,65000)){return false;}
+      if(!WaitFor(Resp_STK_OK,65000)){return false;}
       
       
       #ifdef DEBUG
@@ -92,8 +92,8 @@ void InitProg ()
       Serial.write(device,20);
       Serial.write(Sync_CRC_EOP);
       
-      WaitFor(Resp_STK_INSYNC,65000); 
-      WaitFor(Resp_STK_OK,65000);
+      if(!WaitFor(Resp_STK_INSYNC,65000)){return false;} 
+      if(!WaitFor(Resp_STK_OK,65000)){return false;}
 
       
       #ifdef DEBUG
@@ -103,8 +103,8 @@ void InitProg ()
       Serial.write(device_ext,5);
       Serial.write(Sync_CRC_EOP);
       
-      WaitFor(Resp_STK_INSYNC,65000); 
-      WaitFor(Resp_STK_OK,65000);
+      if(!WaitFor(Resp_STK_INSYNC,65000)){return false;} 
+      if(!WaitFor(Resp_STK_OK,65000)){return false;}
       
       
       #ifdef DEBUG
@@ -113,8 +113,8 @@ void InitProg ()
       Serial.write(Cmnd_STK_ENTER_PROGMODE);
       Serial.write(Sync_CRC_EOP);
       
-      WaitFor(Resp_STK_INSYNC,65000); 
-      WaitFor(Resp_STK_OK,65000);
+      if(!WaitFor(Resp_STK_INSYNC,65000)){return false;} 
+      if(!WaitFor(Resp_STK_OK,65000)){return false;}
       
       #ifdef DEBUG
         Serial1.println("Read Sign");
@@ -122,8 +122,8 @@ void InitProg ()
       Serial.write(Cmnd_STK_READ_SIGN);
       Serial.write(Sync_CRC_EOP);
       //TODO: Falta chekeqar la firma
-      WaitFor(Resp_STK_INSYNC,65000); 
-      WaitFor(Resp_STK_OK,65000);
+      if(!WaitFor(Resp_STK_INSYNC,65000)){return false;} 
+      if(!WaitFor(Resp_STK_OK,65000)){return false;}
       
       #ifdef DEBUG
         Serial1.println("Enable Timer");
@@ -322,7 +322,15 @@ Line::Line(String linea) {
  * @brief Destroy the Line:: Line object
  */
 Line::~Line(){
-  //free(data);
+  #ifdef DEBUG
+    Serial1.println("Destructor");    
+    Serial1.println(data);    
+  #endif
+  free(data);
+  #ifdef DEBUG
+    Serial1.println("Destructor - Despues Free");    
+    Serial1.println(data);    
+  #endif
 }
 bool Line::isEOF(){
   return type == 1;

@@ -255,7 +255,16 @@ void loop() {
     case Download:
       if (programCounter == 0)
       {
-        InitProg();
+        if (!InitProg())
+        {
+          #ifdef DEBUG
+            Serial1.println("Error InitProg");
+          #endif
+          OldState = CurrentState;
+          CurrentState = Error;
+          CurrentError = P_ArduinoNoResponse;
+          break;
+        }
       }
       request.concat(url);request.concat(WiFi.macAddress());request.concat("/");request.concat(programCounter++);request.concat("/8/");
       #ifdef DEBUG
