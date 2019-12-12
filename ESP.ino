@@ -13,7 +13,7 @@
 
 const char* ssid      = STASSID;
 const char* password  = STAPSK;
-const char* url       = "http://192.168.43.198:3000/esps/";
+const char* url       = "http://tobyteam.computerengineering.me/esps/";
 
 
 typedef enum{
@@ -22,6 +22,7 @@ typedef enum{
   Download,   //Actualiza el arduino
   Program,
   Wait,       //Espera
+  Updated,
   Error       //Error
 } State;
 
@@ -38,7 +39,7 @@ typedef enum{
   P_NoResponse        = 350,  //Server not response
   P_InvalidResponse   = 400,  //Invalid response from server
   P_ArduinoNoResponse = 450,  //
-  p_ChecsumError      = 500   //CheckSum
+  P_ChecksumError      = 500   //CheckSum
 } ErrorCode;
 //-----------------Fin zona de definiciones--------------------
 
@@ -97,6 +98,9 @@ String getStateText(State state)
     case Wait:       //Espera
       return "Wait";
       break;
+    case Updated:
+      return "Updated";
+      break;
     case Error: 
       return "Error";
       break; 
@@ -136,7 +140,7 @@ String getErrorText(ErrorCode error)
     case P_ArduinoNoResponse:   // 
       return "Arduino no response";
       break;
-    case p_ChecsumError:
+    case P_ChecksumError:
       return "CheckSum verify error";
       break;
     default:
@@ -176,6 +180,9 @@ void loop() {
   switch (CurrentState)
   {
     case Error:
+      programCounter = 0;
+      p.init();
+      timer1_disable();
       digitalWrite(LED_BUILTIN,!digitalRead(LED_BUILTIN));
       delay(CurrentError);
       switch(CurrentError)
@@ -190,6 +197,41 @@ void loop() {
             CurrentState = Init;
           }
         break;
+        case P_ArduinoNoResponse:
+          if (MEFCount-- == 0){
+            request.concat(url);request.concat(WiFi.macAddress());request.concat("/error/ArduinoNoResponse");// request.concat("45");
+            #ifdef DEBUG
+              Serial1.println(request);
+            #endif
+            if(WiFi.status() == WL_CONNECTED){
+                if (http.begin(client, request)) {  // HTTP
+                  int httpCode = http.POST("Arduino No Response");
+                }
+            }
+            OldState = CurrentState;
+            CurrentState = Init;
+          }
+        break;
+        case P_ChecksumError:
+          if (MEFCount-- == 0){
+            request.concat(url);request.concat(WiFi.macAddress());request.concat("/error/CheckSumError");// request.concat("45");
+            #ifdef DEBUG
+              Serial1.println(request);
+            #endif
+            if(WiFi.status() == WL_CONNECTED){
+                if (http.begin(client, request)) {  // HTTP
+                  int httpCode = http.POST("Arduino No Response");
+                }
+            }
+            OldState = CurrentState;
+            CurrentState = Init;
+          }
+        break;
+        default:
+          if (MEFCount-- == 0){
+            OldState = CurrentState;
+            CurrentState = Init;
+          }
       }
     break;
     case Init:
@@ -223,28 +265,32 @@ void loop() {
               }else if (result == "Updated"){
                 OldState = CurrentState;
                 CurrentState = Wait;
-                MEFCount = 600;
+                MEFCount = 180;
               } else {
                 OldState = CurrentState;
                 CurrentState = Error;
                 CurrentError = C_InvalidResponse;
+                MEFCount = 600;
               }
             }
           } else {
             OldState = CurrentState;
             CurrentState = Error;
             CurrentError = C_InvalidResponse;
+            MEFCount = 600;
           }
           http.end();
         } else {
           OldState = CurrentState;
           CurrentState = Error;
           CurrentError = C_NoResponse;
+          MEFCount = 600;
         }
       } else {
           OldState = CurrentState;
           CurrentState = Error;
           CurrentError = C_NoConnected;
+          MEFCount = 600;
       }
     break;
     case Wait:
@@ -263,6 +309,7 @@ void loop() {
           OldState = CurrentState;
           CurrentState = Error;
           CurrentError = P_ArduinoNoResponse;
+          MEFCount = 60;
           break;
         }
       }
@@ -283,17 +330,62 @@ void loop() {
             OldState = CurrentState;
             CurrentState = Error;
             CurrentError = P_InvalidResponse;
+            MEFCount = 600;
           }
           http.end();
         } else {
           OldState = CurrentState;
           CurrentState = Error;
           CurrentError = P_NoResponse;
+          MEFCount = 600;
         }
       } else {
           OldState = CurrentState;
           CurrentState = Error;
           CurrentError = P_NoConnected;
+          MEFCount = 600;
+      }
+    break;
+        case Updated:
+      request.concat(url);request.concat(WiFi.macAddress());request.concat("/updated");// request.concat("45");
+      #ifdef DEBUG
+        Serial1.println(request);
+      #endif
+      if(WiFi.status() == WL_CONNECTED){
+        if (http.begin(client, request)) {  // HTTP
+          int httpCode = http.GET();
+          if (httpCode > 0) {
+            if (httpCode == HTTP_CODE_OK || httpCode == HTTP_CODE_MOVED_PERMANENTLY) {
+              result = http.getString();
+              if (result == "Updated"){
+                OldState = CurrentState;
+                CurrentState = Wait;
+                MEFCount = 180;
+              } else {
+                OldState = CurrentState;
+                CurrentState = Error;
+                CurrentError = C_InvalidResponse;
+                MEFCount = 600;
+              }
+            }
+          } else {
+            OldState = CurrentState;
+            CurrentState = Error;
+            CurrentError = C_InvalidResponse;
+            MEFCount = 600;
+          }
+          http.end();
+        } else {
+          OldState = CurrentState;
+          CurrentState = Error;
+          CurrentError = C_NoResponse;
+          MEFCount = 600;
+        }
+      } else {
+          OldState = CurrentState;
+          CurrentState = Error;
+          CurrentError = C_NoConnected;
+          MEFCount = 600;
       }
     break;
     case Program:
@@ -302,27 +394,41 @@ void loop() {
           #ifdef DEBUG
             Serial1.println("Ingreso While");    
           #endif
-          Line l(program.substring(aux,program.indexOf(':',aux+1)));
+          Line *l = new Line(program.substring(aux,program.indexOf(':',aux+1)));
           #ifdef DEBUG
             Serial1.println("Linea Cargada");    
           #endif
-          if (l.verify())
+          if (l->verify())
           {
-            if (l.isEOF())
+            if (l->isEOF())
             {
               p.program();
               //Programar Pagina
               timer1_disable();
               OldState = CurrentState;
-              CurrentState = Wait;
-              MEFCount = 3600;
+              CurrentState = Updated;
+              MEFCount = 0;
               programCounter=0;
+              p.init();
               break;
             }
             else
             {
               //Agregar linea a la pagina 
-              p.addLine(l); // falta verificacion si hay que reprocesar la linea
+              uint8_t result = p.addLine((*l));
+              switch (result)
+              {
+              case 0:
+                continue;
+                break;
+              case -1:
+                  OldState = CurrentState;
+                  CurrentState = Error;
+                  CurrentError = P_ArduinoNoResponse;
+                  MEFCount = 60;
+                  return;
+                  break;
+              }
             }
             
           }
@@ -330,16 +436,19 @@ void loop() {
           {
             OldState = CurrentState;
             programCounter=0;
-            CurrentError = p_ChecsumError;
+            p.init();
+            CurrentError = P_ChecksumError;
             CurrentState = Error;
           }
           aux = program.indexOf(':',aux+1);
+          //delete l;
       }
       if (CurrentState == Program)
       {
         OldState = CurrentState;
         CurrentState = Download;
       }
+
     break;
   }
 }

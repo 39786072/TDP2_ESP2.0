@@ -2,7 +2,7 @@
 #include "Programador.h"
 #include "command.h"
 
-
+#define TIMEOUT 1500
 unsigned char strtobyte(char value)
 {
   if (value <= '9' && value >= '0') // si el valor está entre 0 y 9
@@ -19,7 +19,7 @@ unsigned char strtobyte(char value)
   }
   return value;
 }
-bool WaitFor(uint8_t c, uint16_t timeout)
+bool WaitFor(uint8_t c, uint32_t timeout)
 {
   bool found = 0;
   while(!found && timeout--)
@@ -28,6 +28,7 @@ bool WaitFor(uint8_t c, uint16_t timeout)
     {
       found = Serial.read() == c;
     }
+    delay(1);
   }
   return found;
 }
@@ -49,8 +50,8 @@ bool InitProg ()
       #endif
       Serial.write(Cmnd_STK_GET_SYNC);
       Serial.write(Sync_CRC_EOP);
-      if(!WaitFor(Resp_STK_INSYNC,65000)){return false;}
-      if(!WaitFor(Resp_STK_OK,65000)){return false;}
+      if(!WaitFor(Resp_STK_INSYNC,TIMEOUT)){return false;}
+      if(!WaitFor(Resp_STK_OK,TIMEOUT)){return false;}
      
       
       #ifdef DEBUG
@@ -58,8 +59,8 @@ bool InitProg ()
       #endif
       Serial.write(Cmnd_STK_GET_SYNC);
       Serial.write(Sync_CRC_EOP);
-      if(!WaitFor(Resp_STK_INSYNC,65000)){return false;}
-      if(!WaitFor(Resp_STK_OK,65000)){return false;}
+      if(!WaitFor(Resp_STK_INSYNC,TIMEOUT)){return false;}
+      if(!WaitFor(Resp_STK_OK,TIMEOUT)){return false;}
       
       #ifdef DEBUG
         Serial1.println("GET MAJOR");
@@ -68,9 +69,9 @@ bool InitProg ()
       Serial.write(Parm_STK_SW_MAJOR);
       Serial.write(Sync_CRC_EOP);
       
-      if(!WaitFor(Resp_STK_INSYNC,65000)){return false;}
-      if(!WaitFor(0x4,65000)){return false;} 
-      if(!WaitFor(Resp_STK_OK,65000)){return false;}
+      if(!WaitFor(Resp_STK_INSYNC,TIMEOUT)){return false;}
+      if(!WaitFor(0x4,TIMEOUT)){return false;} 
+      if(!WaitFor(Resp_STK_OK,TIMEOUT)){return false;}
 
       
       #ifdef DEBUG
@@ -80,9 +81,9 @@ bool InitProg ()
       Serial.write(Parm_STK_SW_MINOR);
       Serial.write(Sync_CRC_EOP);
       
-      if(!WaitFor(Resp_STK_INSYNC,65000)){return false;}
-      if(!WaitFor(0x4,65000)){return false;}
-      if(!WaitFor(Resp_STK_OK,65000)){return false;}
+      if(!WaitFor(Resp_STK_INSYNC,TIMEOUT)){return false;}
+      if(!WaitFor(0x4,TIMEOUT)){return false;}
+      if(!WaitFor(Resp_STK_OK,TIMEOUT)){return false;}
       
       
       #ifdef DEBUG
@@ -92,8 +93,8 @@ bool InitProg ()
       Serial.write(device,20);
       Serial.write(Sync_CRC_EOP);
       
-      if(!WaitFor(Resp_STK_INSYNC,65000)){return false;} 
-      if(!WaitFor(Resp_STK_OK,65000)){return false;}
+      if(!WaitFor(Resp_STK_INSYNC,TIMEOUT)){return false;} 
+      if(!WaitFor(Resp_STK_OK,TIMEOUT)){return false;}
 
       
       #ifdef DEBUG
@@ -103,8 +104,8 @@ bool InitProg ()
       Serial.write(device_ext,5);
       Serial.write(Sync_CRC_EOP);
       
-      if(!WaitFor(Resp_STK_INSYNC,65000)){return false;} 
-      if(!WaitFor(Resp_STK_OK,65000)){return false;}
+      if(!WaitFor(Resp_STK_INSYNC,TIMEOUT)){return false;} 
+      if(!WaitFor(Resp_STK_OK,TIMEOUT)){return false;}
       
       
       #ifdef DEBUG
@@ -113,8 +114,8 @@ bool InitProg ()
       Serial.write(Cmnd_STK_ENTER_PROGMODE);
       Serial.write(Sync_CRC_EOP);
       
-      if(!WaitFor(Resp_STK_INSYNC,65000)){return false;} 
-      if(!WaitFor(Resp_STK_OK,65000)){return false;}
+      if(!WaitFor(Resp_STK_INSYNC,TIMEOUT)){return false;} 
+      if(!WaitFor(Resp_STK_OK,TIMEOUT)){return false;}
       
       #ifdef DEBUG
         Serial1.println("Read Sign");
@@ -122,8 +123,8 @@ bool InitProg ()
       Serial.write(Cmnd_STK_READ_SIGN);
       Serial.write(Sync_CRC_EOP);
       //TODO: Falta chekeqar la firma
-      if(!WaitFor(Resp_STK_INSYNC,65000)){return false;} 
-      if(!WaitFor(Resp_STK_OK,65000)){return false;}
+      if(!WaitFor(Resp_STK_INSYNC,TIMEOUT)){return false;} 
+      if(!WaitFor(Resp_STK_OK,TIMEOUT)){return false;}
       
       #ifdef DEBUG
         Serial1.println("Enable Timer");
@@ -143,8 +144,8 @@ Page::Page(int _pageSize)
       Serial1.println(_pageSize);
     #endif
     pageIndex = 0;
-    pageSize = _pageSize;
     pagePos = 0;
+    pageSize = _pageSize;
     page = (uint8_t *) calloc(pageSize,sizeof(uint8_t));
     #ifdef DEBUG
       if (page == NULL)
@@ -189,8 +190,8 @@ bool Page::program(){
   Serial.write(((pageIndex*pageSize) / 2 ) >> 8 & 0xFF);
   Serial.write(Sync_CRC_EOP);
     //Esperar confirmacion
-  WaitFor(Resp_STK_INSYNC,65000); 
-  WaitFor(Resp_STK_OK,65000);
+  if(!WaitFor(Resp_STK_INSYNC,65000)){return false;} 
+  if(!WaitFor(Resp_STK_OK,65000)){return false;}
     //Enviar Datos
     //Esperar confirmacion
   Serial.write(Cmnd_STK_PROG_PAGE);
@@ -203,8 +204,8 @@ bool Page::program(){
     Serial.write(page[i]);
   }
   Serial.write(Sync_CRC_EOP);
-  WaitFor(Resp_STK_INSYNC,65000); 
-  WaitFor(Resp_STK_OK,65000);
+  if(!WaitFor(Resp_STK_INSYNC,65000)){return false;} 
+  if(!WaitFor(Resp_STK_OK,65000)){return false;}
 
     //Reiniciar Timer
   timer1_enable(TIM_DIV256, TIM_EDGE, TIM_LOOP);
@@ -213,7 +214,17 @@ bool Page::program(){
   pagePos = 0; 
     return true;
 }
-//Si retorna falso debe reprocesarse la linea, si no está terminada
+void Page::init(){
+    pageIndex = 0;
+    pagePos = 0;
+
+}
+
+
+
+//Si retorna falso debe reprocesarse la linea, si no está terminadz
+
+
 /**
  * @brief Add a new line to page
  * 
@@ -221,7 +232,7 @@ bool Page::program(){
  * @return true if the line was processed comple
  * @return false 
  */
-bool Page::addLine(Line l){
+uint8_t Page::addLine(Line l){
   uint8_t i = 0;
   uint8_t j = 0;
   #ifdef DEBUG
@@ -264,9 +275,12 @@ bool Page::addLine(Line l){
       #endif
       if (ACTUALPOS == PAGEENDS)
       {
-        this->program();
+        if (!this->program())
+        {
+          return -1;
+        }
       }
-      return true;
+      return 1;
     }
     else
     { //Si la linea no entra completa copia hasta completarla
@@ -285,14 +299,14 @@ bool Page::addLine(Line l){
         Serial1.println("Termine");    
       #endif
       this->program();
-      return false;
+      return 0;
     }
   } else {
     #ifdef DEBUG
       Serial1.println("La linea no empieza en esta pagina");    
     #endif
     this->program();
-    return false;
+    return 0;
   }
 }
 /**
@@ -322,15 +336,10 @@ Line::Line(String linea) {
  * @brief Destroy the Line:: Line object
  */
 Line::~Line(){
-  #ifdef DEBUG
-    Serial1.println("Destructor");    
-    Serial1.println(data);    
-  #endif
-  free(data);
-  #ifdef DEBUG
-    Serial1.println("Destructor - Despues Free");    
-    Serial1.println(data);    
-  #endif
+    free(data);
+    #ifdef DEBUG
+      Serial1.println("Destructor - Despues Free");    
+    #endif
 }
 bool Line::isEOF(){
   return type == 1;

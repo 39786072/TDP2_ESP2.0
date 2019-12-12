@@ -32,7 +32,8 @@
         ~Page();
         bool isComplete();
         bool program();
-        bool addLine(Line);
+        void init();
+        uint8_t addLine(Line);
   };
   typedef enum{
   Code,  NotUsed,  ProgramMode,  ParallelMode,  PollingMode,  SelfTimed, LockBytes, FuseBytes, FlashPolVal1, FlashPolVal2, EEMPROMPolVal1, EEPROMPolVal2, PageSizeHigh, PageSizeLow, EEPROMSizeHigh, EEPROMSizeLow, FlashSize4, FlashSize3, FlashSize2, FlashSize1
@@ -69,6 +70,6 @@ const uint8_t device_ext[5] = {
 
 
 unsigned char strtobyte(char value);
-bool WaitFor(uint8_t c, uint16_t timeout);
+bool WaitFor(uint8_t c, uint32_t timeout);
 bool InitProg ();
 #endif
